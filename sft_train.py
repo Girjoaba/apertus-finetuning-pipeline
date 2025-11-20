@@ -58,6 +58,7 @@ def main(script_args, training_args, model_args):
     # Load dataset
     # --------------
     dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    print(f"Loaded dataset: {dataset}")
 
     # -------------
     # Train model
@@ -72,6 +73,7 @@ def main(script_args, training_args, model_args):
         processing_class=tokenizer,
         peft_config=get_peft_config(model_args),
     )
+    print("Starting training...")
 
     trainer.train()
     trainer.save_model(os.path.join(store_base_dir, training_args.output_dir))
@@ -84,4 +86,7 @@ if __name__ == "__main__":
     script_args, training_args, model_args, _ = parser.parse_args_and_config(
         return_remaining_strings=True
     )
+    print("Script arguments:", script_args)
+    print("Training arguments:", training_args)
+    print("Model arguments:", model_args)
     main(script_args, training_args, model_args)

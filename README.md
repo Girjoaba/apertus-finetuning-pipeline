@@ -10,7 +10,7 @@ Follow [this guide](https://github.com/swiss-ai/Apertus-finetuning-recipes) on h
 
 We finetune our model on our Alps supercomputer nocdes. These instructions replicate how we did it:
 
-### Creat an environment
+### Create an environment
 
 ```bash
 conda create -n myenv python=3.10
