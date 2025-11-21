@@ -18,9 +18,6 @@ echo "[sbatch-master] SLURM_NNODES: $SLURM_NNODES"
 echo "[sbatch-master] SLURM_NODEID: $SLURM_NODEID"
 echo "[sbatch-master] define some env vars that will be passed to the compute nodes"
 
-source ~/.bashrc
-conda activate myenv
-
 # The defined environment vars will be shared with the other compute nodes.
 export MASTER_ADDR=$(scontrol show hostname "$SLURM_NODELIST" | head -n1)  
 export MASTER_PORT=12345   # Choose an unused port
@@ -33,15 +30,17 @@ export TRITON_CACHE_DIR=/iopsstor/scratch/cscs/$USER/triton_cache
 mkdir -p "$TRITON_CACHE_DIR"
 echo "TRITON_CACHE_DIR = $TRITON_CACHE_DIR"
 
+PROJECT_DIR="/users/$USER/scratch/apertus-finetuning-pipeline"
+
 # The command that will run on each process
 CMD="
     # print current environment variables
     echo \"[srun] rank=\$SLURM_PROCID host=\$(hostname) noderank=\$SLURM_NODEID localrank=\$SLURM_LOCALID\"
 
+    cd $PROJECT_DIR
+
     # run the script
-    accelerate launch \
-    --config_file configs/zero3.yaml \
-    sft_train.py \
+    python sft_train.py \
     --config configs/sft_lora.yaml \
     --model_name_or_path swiss-ai/Apertus-8B-Instruct-2509 \
 "
