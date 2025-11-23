@@ -6,9 +6,9 @@ Large Scale AI Engineering 2025 - Course Project
 
 Follow [this guide](https://github.com/swiss-ai/Apertus-finetuning-recipes) on how to finetune Apertus.
 
-## Running on the Alps Supercomputer
+## Set-Up on the Alps Supercomputer
 
-We finetune our model on our Alps supercomputer nocdes. These instructions replicate how we did it:
+We finetune our model on our Alps supercomputer nocdes. We provide 2 ways to do it:
 
 ### Create an environment
 
@@ -20,7 +20,52 @@ pip install torch torchvision torchaudio \
 pip install -r requirements.txt
 ```
 
-### Run a first 1 GPU Lora finetuning script
+### Create a container
+
+1. Acquire a compute node ($GROUP=large-sc-2 for us)
+```bash
+srun --account=$GROUP -p debug --time=01:00:00 --pty bash
+```
+
+2. Create your own image
+```bash
+podman build -t apertus_finetune:v1 .
+
+# After it is built save it somewhere
+cd /iopsstor/scratch/cscs/$USER
+enroot import -o apertus_finetune.sqsh podman://apertus_finetune:v1
+```
+
+Now you can exit the interactive session.
+
+3. Create a toml file:
+```toml
+# Update $USER with your username
+image = "/iopsstor/scratch/cscs/$USER/apertus_finetune.sqsh"
+
+mounts = [
+    "/capstor",
+    "/iopsstor",
+    "/users",
+]
+
+workdir = "/workspace"
+
+[annotations]
+com.hooks.aws_ofi_nccl.enabled = "true"
+com.hooks.aws_ofi_nccl.variant = "cuda12"
+```
+
+4. Copy it in the `~/.edf/` folder.
+
+5. Verify 
+```bash
+srun --account=$GROUP --environment=$MY_FINETUNE -p debug --pty bash
+pip list | grep -E "kernels|peft|trl|transformers|deepspeed|accelerate"
+exit
+```
+
+## Run a first 1 GPU Lora finetuning script
 ```bash
 sbatch -A large-sc-2 single_gpu_alps.sbatch
 ```

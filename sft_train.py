@@ -41,12 +41,11 @@ def main(script_args, training_args, model_args):
     #Set base directory to store model
     store_base_dir = "./" #os.getenv("STORE")
 
-
     model = AutoModelForCausalLM.from_pretrained(
         model_args.model_name_or_path,
-        dtype=model_args.dtype,
+        dtype=model_args.torch_dtype,
         use_cache=False if training_args.gradient_checkpointing else True,
-        attn_implementation=model_args.attn_implementation,   # <-- ensure it’s used
+        attn_implementation=model_args.attn_implementation, 
     )
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -83,9 +82,14 @@ def main(script_args, training_args, model_args):
 
 if __name__ == "__main__":
     parser = TrlParser((ScriptArguments, SFTConfig, ModelConfig))
-    script_args, training_args, model_args, _ = parser.parse_args_and_config(
-        return_remaining_strings=True
-    )
+    raw_args = parser.parse_args_and_config(return_remaining_strings=True)
+    
+    # Robust unpacking
+    if len(raw_args) == 2:
+        (script_args, training_args, model_args), remaining_args = raw_args
+    else:
+        script_args, training_args, model_args, remaining_args = raw_args
+
     print("Script arguments:", script_args)
     print("Training arguments:", training_args)
     print("Model arguments:", model_args)
