@@ -18,6 +18,7 @@ RUN pip install \
     "trl>=0.21.0" \
     "accelerate>=1.1.1" \
     "datasets>=3.0.0" \
+    "lm_eval[hf]==0.4.9.1" \
     deepspeed \
     wandb \
     bitsandbytes \

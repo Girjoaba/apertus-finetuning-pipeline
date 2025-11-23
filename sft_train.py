@@ -32,7 +32,46 @@ from trl import (
     get_peft_config,
 )
 
+def format_medqa(example):
+    # Get Question
+    # Sometimes the question is split between sent1 and sent2, usually it's just sent1
+    question = example.get("sent1", "").strip()
+    if example.get("sent2"):
+        question += " " + example["sent2"]
 
+    # Get options
+    option_keys = ["ending0", "ending1", "ending2", "ending3"]
+    labels = ["A", "B", "C", "D"]
+    options_text_lines = []
+    options_list = []
+    
+    for i, key in enumerate(option_keys):
+        opt_text = example.get(key, "N/A")
+        options_list.append(opt_text)
+        options_text_lines.append(f"{labels[i]}: {opt_text}")
+    options_block = "\n".join(options_text_lines)
+
+    # Get Correct Answer
+    correct_idx = example["label"] 
+    correct_label = labels[correct_idx]         # e.g., "A"
+    correct_text = options_list[correct_idx]    # e.g., "Ampicillin"
+
+    # Build User Prompt
+    user_content = (
+        f"Answer the following multiple choice question about medical knowledge.\n\n"
+        f"{question}\n\n"
+        f"Options:\n{options_block}\n\n"
+        f"Answer:"
+    )
+
+    # Build Assistant Answer
+    assistant_content = f"{correct_label}: {correct_text}"
+    return {
+        "messages": [
+            {"role": "user", "content": user_content},
+            {"role": "assistant", "content": assistant_content}
+        ]
+    }
 
 def main(script_args, training_args, model_args):
     # ------------------------
@@ -57,6 +96,13 @@ def main(script_args, training_args, model_args):
     # Load dataset
     # --------------
     dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    
+    # Preprocess MedQA dataset
+    if "MedQA" in script_args.dataset_name:
+            print("Formatting MedQA dataset to chat format...")
+            print(f"Dataset Columns detected: {dataset['train'].column_names}")
+            dataset = dataset.map(format_medqa, num_proc=training_args.dataset_num_proc)
+
     print(f"Loaded dataset: {dataset}")
 
     # -------------

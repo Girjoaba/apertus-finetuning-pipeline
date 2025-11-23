@@ -2,13 +2,15 @@
 Large Scale AI Engineering 2025 - Course Project
 
 
-## Finetuning Recipes
+<!-- ## Finetuning Recipes
 
-Follow [this guide](https://github.com/swiss-ai/Apertus-finetuning-recipes) on how to finetune Apertus.
+Follow [this guide](https://github.com/swiss-ai/Apertus-finetuning-recipes) on how to finetune Apertus. -->
 
 ## Set-Up on the Alps Supercomputer
 
-We finetune our model on our Alps supercomputer nocdes. We provide 2 ways to do it:
+We must create a container for this. Please follow the instructions step-by-step.
+
+<!-- We finetune our model on our Alps supercomputer nocdes. We provide 2 ways to do it:
 
 ### Create an environment
 
@@ -20,7 +22,7 @@ pip install torch torchvision torchaudio \
 pip install -r requirements.txt
 ```
 
-### Create a container
+### Create a container -->
 
 1. Acquire a compute node ($GROUP=large-sc-2 for us)
 ```bash
@@ -38,7 +40,7 @@ enroot import -o apertus_finetune.sqsh podman://apertus_finetune:v1
 
 Now you can exit the interactive session.
 
-3. Create a toml file:
+3. Create a toml file and name it. We will refer to this file name by `$ENVIRONMENT`:
 ```toml
 # Update $USER with your username
 image = "/iopsstor/scratch/cscs/$USER/apertus_finetune.sqsh"
@@ -58,21 +60,41 @@ com.hooks.aws_ofi_nccl.variant = "cuda12"
 
 4. Copy it in the `~/.edf/` folder.
 
-5. Verify 
+5. Set in the `$REPO_ROOT/config.sh` the `$ENVIRONMENT` variable.
 ```bash
-srun --account=$GROUP --environment=$MY_FINETUNE -p debug --pty bash
-pip list | grep -E "kernels|peft|trl|transformers|deepspeed|accelerate"
+export SCRATCH_DIR="/iopsstor/scratch/cscs/$USER"   
+export TRITON_CACHE_DIR="$SCRATCH_DIR/triton_cache"
+
+# make this point to your environment defined in .edf
+export ENVIRONMENT=  # <--- this one
+```
+
+6. Verify 
+```bash
+srun --account=$GROUP --environment=$ENVIRONMENT -p debug --pty bash
+pip list | grep -E "kernels|peft|trl|transformers|deepspeed|accelerate|lm_eval"
 exit
 ```
 
-## Run a first 1 GPU Lora finetuning script
+## Benchmarking Lora
+
+First, we need to finetune our model with lora. Call this script from the repository root:
 ```bash
-sbatch -A large-sc-2 single_gpu_alps.sbatch
+sbatch scripts/alps/single_gpu_alps.sbatch
 ```
 
-## Datasets
+Then, to compare the base model and the lora finetuned model, call this script from the repository root:
+
+```bash
+sbatch scripts/alps/eval_medqa.sbatch
+```
+
+You will find your results in `$REP_ROOT/results`. 
+
+<!-- ## Datasets
 
 A first attempt is to finetune for the medical domain. But, see [this repository](https://github.com/mlabonne/llm-datasets?tab=readme-ov-file) for many LLM training datasets.
 
 
-## References
+
+## References -->
