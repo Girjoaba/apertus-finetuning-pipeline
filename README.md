@@ -29,7 +29,7 @@ pip install -r requirements.txt
 srun --account=$GROUP -p debug --time=01:00:00 --pty bash
 ```
 
-2. Create your own image
+2. Create your own image. This takes about 10 minutes.
 ```bash
 podman build -t apertus_finetune:v1 .
 
@@ -90,6 +90,17 @@ sbatch scripts/alps/eval_medqa.sbatch
 ```
 
 You will find your results in `$REP_ROOT/results`. 
+
+## Tracking training with wandb
+
+Log into wandb to get your personal API key and add your API key to the container's .toml file
+
+```bash
+WANDB_API_KEY = "your_API_key"
+WANDB_DIR = "/iopsstor/scratch/cscs/$USER/group_project/wandb"
+WANDB_PROJECT = "apertus-finetune"
+```
+
 
 <!-- ## Datasets
 

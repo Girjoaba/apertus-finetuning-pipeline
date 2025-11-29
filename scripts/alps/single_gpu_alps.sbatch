@@ -5,9 +5,9 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=1
-#SBATCH --time=00:10:00
+#SBATCH --time=01:00:00
 #SBATCH --output=logs/finetune_apertus_%j.out
-#SBATCH --error=logs/finetune_pertus_%j.err
+#SBATCH --error=logs/finetune_apertus_%j.err
 
 set -eo pipefail
 

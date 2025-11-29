@@ -12,7 +12,7 @@ dataset_num_proc: 12
 learning_rate: 2.0e-4
 gradient_checkpointing: true
 num_train_epochs: 1.0
-max_steps: 10
+max_steps: 2500
 logging_steps: 1
 per_device_train_batch_size: 1
 gradient_accumulation_steps: 1
@@ -34,5 +34,12 @@ lr_scheduler_kwargs:
 
 # Output & logging
 output_dir: output/apertus_lora
-report_to: "none" 
 seed: 42
+report_to: # add wandb to log run on Weigths and Biases
+  - wandb
+run_name: "apertus-medqa-lora"  
+logging_steps: 5                # how often to log train loss
+eval_strategy: "steps"     # or "epoch"
+eval_steps: 20                  # how often to log eval metrics
+save_steps: 50
+do_eval: true
