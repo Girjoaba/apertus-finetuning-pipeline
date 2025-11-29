@@ -101,6 +101,8 @@ WANDB_DIR = "/iopsstor/scratch/cscs/$USER/group_project/wandb"
 WANDB_PROJECT = "apertus-finetune"
 ```
 
+You will then be able to see real-time performance assessment during training here: https://wandb.ai/lsae/apertus-finetune
+The metric *eval/medqa_mcq_accuracy* gives the multiple-choice accuracy.
 
 <!-- ## Datasets
 
