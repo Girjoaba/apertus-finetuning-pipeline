@@ -10,7 +10,7 @@ export TRITON_CACHE_DIR="$SCRATCH_DIR/triton_cache"
 
 export ENVIRONMENT="my_finetune"  # <-- put your env from .edf here
 
-export WANDB_API_KEY="YOUR_API_KEY" # <-- put your wandb api key here
+export WANDB_API_KEY="" # <-- your w&b key here 
 export WANDB_DIR="/iopsstor/scratch/cscs/$USER/wandb"
 export WANDB_PROJECT="apertus-finetune"
 
