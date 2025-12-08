@@ -93,12 +93,12 @@ You will find your results in `$REP_ROOT/results`.
 
 ## Tracking training with wandb
 
-Log into wandb to get your personal API key and add your API key to the container's .toml file
+Log into wandb to get your personal API key and add your API key to the `$REPO_ROOT/config.sh` file.
 
 ```bash
-WANDB_API_KEY = "your_API_key"
-WANDB_DIR = "/iopsstor/scratch/cscs/$USER/group_project/wandb"
-WANDB_PROJECT = "apertus-finetune"
+export WANDB_API_KEY="YOUR_API_KEY" # <-- put your wandb api key here
+export WANDB_DIR="/iopsstor/scratch/cscs/$USER/wandb"
+export WANDB_PROJECT="apertus-finetune"
 ```
 
 You will then be able to see real-time performance assessment during training here: https://wandb.ai/lsae/apertus-finetune
