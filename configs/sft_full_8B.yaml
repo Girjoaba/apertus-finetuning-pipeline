@@ -2,6 +2,7 @@
 model_name_or_path: swiss-ai/Apertus-8B-Instruct-2509
 attn_implementation:  flash_attention_2
 torch_dtype: bfloat16
+use_peft: false
 
 # Dataset
 dataset_name: openlifescienceai/MedQA-USMLE-4-options-hf
@@ -11,25 +12,24 @@ dataset_train_split: train
 dataset_test_split: validation
 
 # Hyperparameters
-learning_rate: 2.0e-4
-gradient_checkpointing: true
-num_train_epochs: 1.0
+learning_rate: 2.0e-5
+gradient_checkpointing: false
+num_train_epochs: 3.0
 max_steps: 500
 logging_steps: 1
 per_device_train_batch_size: 1
-gradient_accumulation_steps: 1
-save_steps: 5
+gradient_accumulation_steps: 16
 
-# LoRA / PEFT
-use_peft: true
-lora_r: 64
-lora_alpha: 128
-lora_dropout: 0.0
-lora_target_modules: all-linear
+# FSDP
+fsdp: "full_shard auto_wrap"
+fsdp_config:
+  activation_checkpointing: true
+  backward_prefetch: "backward_pre"
+  transformer_layer_cls_to_wrap: "ApertusDecoderLayer"
 
 # Seq length & scheduler
 max_length: 4096
-warmup_ratio: 0.03
+warmup_ratio: 0.1
 lr_scheduler_type: cosine_with_min_lr
 lr_scheduler_kwargs:
   min_lr_rate: 0.1
@@ -39,9 +39,11 @@ output_dir: output/apertus_lora
 seed: 42
 report_to: # add wandb to log run on Weigths and Biases
   - wandb
-run_name: "ap-medqa-lora_r64_alpha128"  
+run_name: "ap-medqa-full_8B"  
 logging_steps: 5                # how often to log train loss
 eval_strategy: "steps"          # or "epoch"
-eval_steps: 20                  # how often to log eval metrics
-save_steps: 50
+eval_steps: 25                  # how often to log eval metrics
+save_steps: 100
 do_eval: true
+log_on_each_node: false
+logging_strategy: "steps"

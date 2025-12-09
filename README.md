@@ -6,7 +6,7 @@ Large Scale AI Engineering 2025 - Course Project
 
 Follow [this guide](https://github.com/swiss-ai/Apertus-finetuning-recipes) on how to finetune Apertus. -->
 
-## Set-Up on the Alps Supercomputer
+## Set-Up on the Alps Supercomputer (~15 min)
 
 We must create a container for this. Please follow the instructions step-by-step.
 
@@ -76,22 +76,8 @@ pip list | grep -E "kernels|peft|trl|transformers|deepspeed|accelerate|lm_eval"
 exit
 ```
 
-## Benchmarking Lora
 
-First, we need to finetune our model with lora. Call this script from the repository root:
-```bash
-sbatch scripts/alps/single_gpu_alps.sbatch
-```
-
-Then, to compare the base model and the lora finetuned model, call this script from the repository root:
-
-```bash
-sbatch scripts/alps/eval_medqa.sbatch
-```
-
-You will find your results in `$REP_ROOT/results`. 
-
-## Tracking training with wandb
+## Tracking Training with wandb
 
 Log into wandb to get your personal API key and add your API key to the `$REPO_ROOT/config.sh` file.
 
@@ -104,6 +90,19 @@ export WANDB_PROJECT="apertus-finetune"
 You will then be able to see real-time performance assessment during training here: https://wandb.ai/lsae/apertus-finetune
 The metric *eval/medqa_mcq_accuracy* gives the multiple-choice accuracy.
 
+## Training
+
+To train with LoRa:
+```bash
+sbatch scripts/alps/single_gpu_alps.sbatch
+```
+
+To perform full parameter training:
+```bash
+sbatch scripts/alps/multi_gpu_full_param_8B.sbatch
+```
+
+See the results on W&B.
 <!-- ## Datasets
 
 A first attempt is to finetune for the medical domain. But, see [this repository](https://github.com/mlabonne/llm-datasets?tab=readme-ov-file) for many LLM training datasets.

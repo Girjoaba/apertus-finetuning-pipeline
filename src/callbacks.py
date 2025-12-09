@@ -9,12 +9,11 @@ class WandbPredictionCallback(TrainerCallback):
     Custom callback to log a sample of model predictions to W&B at the end of evaluation.
     """
 
-    def __init__(self, trainer, tokenizer, dataset, num_samples=10):
+    def __init__(self, trainer, tokenizer, dataset, num_samples=25):
         self.trainer = trainer
         self.tokenizer = tokenizer
         self.dataset = dataset
         self.num_samples = min(num_samples, len(dataset))
-        self._log_artifacts = True  # Flag to ensure we only log dataset once if needed
 
     def on_evaluate(
         self,
@@ -26,12 +25,6 @@ class WandbPredictionCallback(TrainerCallback):
         # Only run on the main process and if W&B is active
         if args.local_rank not in (-1, 0) or wandb.run is None:
             return
-
-        if self._log_artifacts:
-            # Create a W&B Table for the raw dataset
-            raw_table = wandb.Table(data=self.dataset.to_pandas().head(100))
-            wandb.log({"validation_dataset_sample": raw_table})
-            self._log_artifacts = False
 
         model = self.trainer.model
         device = model.device
@@ -77,9 +70,7 @@ class WandbPredictionCallback(TrainerCallback):
         if was_training:
             model.train()
 
-        wandb.log(
-            {
-                "eval_predictions": wandb.Table(columns=columns, data=data),
-                "global_step": state.global_step,
-            }
-        )
+        wandb.log({
+            "eval_predictions": wandb.Table(columns=columns, data=data),
+            "global_step": state.global_step,
+        })

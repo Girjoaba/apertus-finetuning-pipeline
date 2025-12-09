@@ -1,7 +1,9 @@
 import logging
 import re
+from contextlib import nullcontext
 
 import torch
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from trl import SFTTrainer
 
 logger = logging.getLogger(__name__)
@@ -31,41 +33,49 @@ class MedQASFTTrainer(SFTTrainer):
     def _medqa_build_prompt(self, example):
         # If you kept messages from format_medqa, use chat template:
         if "messages" in example and example["messages"]:
+            messages = [
+                msg for msg in example["messages"] if msg["role"] != "assistant"
+            ]
+
             return self.medqa_tokenizer.apply_chat_template(
-                example["messages"],
+                messages,
                 tokenize=False,
                 add_generation_prompt=True,
             )
 
-        # Fallback: reconstruct like format_medqa
-        question = example.get("sent1", "").strip()
-        if example.get("sent2"):
-            question += " " + example["sent2"]
-
-        option_keys = ["ending0", "ending1", "ending2", "ending3"]
-        options_lines = []
-        for i, key in enumerate(option_keys):
-            opt_text = example.get(key, "N/A")
-            options_lines.append(f"{self.medqa_labels[i]}: {opt_text}")
-        options_block = "\n".join(options_lines)
-
-        return (
-            f"Answer the following multiple choice question about medical knowledge.\n\n"
-            f"{question}\n\n"
-            f"Options:\n{options_block}\n\n"
-            f"Answer:"
-        )
+        return ""
 
     def _medqa_extract_choice(self, text: str):
-        m = re.search(r"\b([ABCD])\b", text)
+        """
+        Extract A, B, C, D.
+        """
+        # Look for explicit "Answer: X" pattern
+        m: re.Match[str] | None = re.search(
+            pattern=r"Answer:\s*([ABCD])", string=text, flags=re.IGNORECASE
+        )
         if m:
-            return m.group(1)
-        for ch in self.medqa_labels:
-            if ch in text:
-                return ch
+            return m.group(1).upper()
+
+        # Look for "X:" or "X)" at the start of a line or sentence
+        start_pattern: re.Match[str] | None = re.search(
+            pattern=r"\b([ABCD])[\:\)\.]", string=text
+        )
+        if start_pattern:
+            return start_pattern.group(1).upper()
+
+        # Look for standalone letters with word boundaries
+        standalone: re.Match[str] | None = re.search(
+            pattern=r"\b([ABCD])\b", string=text
+        )
+        if standalone:
+            return standalone.group(1).upper()
+
         return None
 
     def _run_medqa_eval(self):
+        """
+        Becuase this is a custom evaluation script, we must implement distribution ourselves.
+        """
         if self.medqa_eval_dataset is None or self.medqa_tokenizer is None:
             return None
 
@@ -73,42 +83,82 @@ class MedQASFTTrainer(SFTTrainer):
         tokenizer = self.medqa_tokenizer
         device = model.device
 
-        model_was_training = model.training
-        model.eval()
+        num_global_samples: int = min(
+            self.medqa_max_samples, len(self.medqa_eval_dataset)
+        )
+        my_indices: list[int] = list(
+            range(self.args.process_index, num_global_samples, self.args.world_size)
+        )
 
-        correct = 0
-        total = 0
-        num_samples = min(self.medqa_max_samples, len(self.medqa_eval_dataset))
+        batch_size = 8
+        prompts = [
+            self._medqa_build_prompt(self.medqa_eval_dataset[i]) for i in my_indices
+        ]
+        labels = [self.medqa_eval_dataset[i]["label"] for i in my_indices]
 
-        for idx in range(num_samples):
-            ex = self.medqa_eval_dataset[idx]
-            prompt = self._medqa_build_prompt(ex)
+        original_padding_side = tokenizer.padding_side
+        tokenizer.padding_size = "left"
 
-            inputs = tokenizer(prompt, return_tensors="pt").to(device)
+        if isinstance(model, FSDP):
+            fsdp_context = FSDP.summon_full_params(
+                model, writeback=False, rank0_only=False
+            )
+        else:
+            fsdp_context = nullcontext()
 
-            with torch.no_grad():
-                outputs = model.generate(
-                    **inputs,
-                    max_new_tokens=self.medqa_max_new_tokens,
-                    do_sample=False,
-                    pad_token_id=tokenizer.eos_token_id,
+        local_correct = 0
+        local_total = 0
+
+        with fsdp_context:
+            model_was_training = model.training
+            model.eval()
+
+            for i in range(0, len(prompts), batch_size):
+                batch_prompts = prompts[i : i + batch_size]
+                batch_labels = labels[i : i + batch_size]
+
+                inputs = tokenizer(
+                    batch_prompts, return_tensors="pt", padding=True, truncation=True
+                ).to(device)
+
+                with torch.no_grad():
+                    # Force BF16 to stop FlashAttn from complaining about FP32 master weights
+                    with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+                        outputs = model.generate(
+                            **inputs,
+                            max_new_tokens=self.medqa_max_new_tokens,
+                            do_sample=False,
+                            pad_token_id=tokenizer.eos_token_id,
+                        )
+
+                input_len = inputs["input_ids"].shape[1]
+                generated_tokens = outputs[:, input_len:]
+                decoded_preds = tokenizer.batch_decode(
+                    generated_tokens, skip_special_tokens=True
                 )
 
-            gen_tokens = outputs[0][inputs["input_ids"].shape[1] :]
-            gen_text = tokenizer.decode(gen_tokens, skip_special_tokens=True)
+                for pred_text, gold_idx in zip(decoded_preds, batch_labels):
+                    pred_letter = self._medqa_extract_choice(pred_text)
+                    gold_letter = self.medqa_labels[gold_idx]
 
-            pred_letter = self._medqa_extract_choice(gen_text)
-            gold_idx = ex["label"]
-            gold_letter = self.medqa_labels[gold_idx]
+                    if pred_letter == gold_letter:
+                        local_correct += 1
+                    local_total += 1
 
-            if pred_letter == gold_letter:
-                correct += 1
-            total += 1
+            if model_was_training:
+                model.train()
 
-        if model_was_training:
-            model.train()
+        tokenizer.padding_side = original_padding_side
 
-        return correct / total if total > 0 else 0.0
+        stats = torch.tensor(
+            [local_correct, local_total], dtype=torch.float32, device=device
+        )
+        torch.distributed.all_reduce(stats, op=torch.distributed.ReduceOp.SUM)
+
+        global_correct = stats[0].item()
+        global_total = stats[1].item()
+
+        return global_correct / global_total if global_total > 0 else 0.0
 
     def evaluate(self, eval_dataset=None, **kwargs):
         """
@@ -117,13 +167,12 @@ class MedQASFTTrainer(SFTTrainer):
         3. Log updated metrics (so W&B also gets it).
         """
         metrics = super().evaluate(eval_dataset=eval_dataset, **kwargs)
+        acc = self._run_medqa_eval()
 
         # Only main process should run this extra eval
-        if self.args.local_rank in (-1, 0):
-            acc = self._run_medqa_eval()
+        if self.args.process_index == 0:
             if acc is not None:
                 metrics["eval_medqa_mcq_accuracy"] = acc
-                # log merged metrics again so W&B sees it
                 self.log({"eval_medqa_mcq_accuracy": acc})
 
                 print(
