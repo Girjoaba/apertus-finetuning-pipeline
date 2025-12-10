@@ -97,7 +97,7 @@ class MedQASFTTrainer(SFTTrainer):
         labels = [self.medqa_eval_dataset[i]["label"] for i in my_indices]
 
         original_padding_side = tokenizer.padding_side
-        tokenizer.padding_size = "left"
+        tokenizer.padding_side = "left"
 
         if isinstance(model, FSDP):
             fsdp_context = FSDP.summon_full_params(
@@ -153,7 +153,8 @@ class MedQASFTTrainer(SFTTrainer):
         stats = torch.tensor(
             [local_correct, local_total], dtype=torch.float32, device=device
         )
-        torch.distributed.all_reduce(stats, op=torch.distributed.ReduceOp.SUM)
+        if torch.distributed.is_available() and torch.distributed.is_initialized():
+            torch.distributed.all_reduce(stats, op=torch.distributed.ReduceOp.SUM)
 
         global_correct = stats[0].item()
         global_total = stats[1].item()

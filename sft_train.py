@@ -134,7 +134,8 @@ def main(
         trust_remote_code=model_args.trust_remote_code,
     )
 
-    disable_fsdp_padding_idx(model=model)
+    if getattr(training_args, "fsdp", None):
+        disable_fsdp_padding_idx(model=model)
 
     tokenizer = AutoTokenizer.from_pretrained(
         pretrained_model_name_or_path=model_args.model_name_or_path,
@@ -157,7 +158,6 @@ def main(
         logger.info("No PEFT config found. Running FULL parameters training.")
     else:
         logger.info("PEFT config detected. Running LoRA/PEFT training.")
-        model.print_trainable_parameters()
 
     # ========================
     # Dataset

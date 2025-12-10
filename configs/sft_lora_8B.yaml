@@ -42,6 +42,6 @@ report_to: # add wandb to log run on Weigths and Biases
 run_name: "ap-medqa-lora_r64_alpha128"  
 logging_steps: 5                # how often to log train loss
 eval_strategy: "steps"          # or "epoch"
-eval_steps: 20                  # how often to log eval metrics
+eval_steps: 25                  # how often to log eval metrics
 save_steps: 50
 do_eval: true

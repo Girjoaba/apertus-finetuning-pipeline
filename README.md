@@ -94,7 +94,7 @@ The metric *eval/medqa_mcq_accuracy* gives the multiple-choice accuracy.
 
 To train with LoRa:
 ```bash
-sbatch scripts/alps/single_gpu_alps.sbatch
+sbatch scripts/alps/single_gpu_lora_8B.sbatch
 ```
 
 To perform full parameter training:

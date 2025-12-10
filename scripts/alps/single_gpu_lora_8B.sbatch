@@ -6,8 +6,8 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=1
 #SBATCH --time=01:00:00
-#SBATCH --output=logs/finetune_apertus_%j.out
-#SBATCH --error=logs/finetune_apertus_%j.err
+#SBATCH --output=logs/finetune_apertus_lora8B_%j.out
+#SBATCH --error=logs/finetune_apertus_lora8B_%j.err
 
 set -eo pipefail
 
@@ -26,7 +26,7 @@ CMD="
     cd $PROJECT_DIR
 
     # run the script
-    python sft_train.py --config configs/sft_lora.yaml
+    python sft_train.py --config configs/sft_lora_8B.yaml
 "
 
 srun \
