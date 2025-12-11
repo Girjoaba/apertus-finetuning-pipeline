@@ -14,6 +14,9 @@ export WANDB_API_KEY="" # <-- your w&b key here
 export WANDB_DIR="/iopsstor/scratch/cscs/$USER/wandb"
 export WANDB_PROJECT="apertus-finetune"
 
+export HF_HOME="/iopsstor/scratch/cscs/$USER/.cache/huggingface"
+export TRANSFORMERS_CACHE="/iopsstor/scratch/cscs/$USER/.cache/huggingface"
+export HF_DATASETS_CACHE="/iopsstor/scratch/cscs/$USER/.cache/huggingface/datasets"
 
 # Create necessary directories
 mkdir -p "$TRITON_CACHE_DIR"
