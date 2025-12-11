@@ -1,0 +1,51 @@
+# Model
+model_name_or_path: swiss-ai/Apertus-70B-2509
+attn_implementation:  flash_attention_2
+torch_dtype: bfloat16
+
+# Dataset
+dataset_name: openlifescienceai/MedQA-USMLE-4-options-hf
+dataset_config: null 
+dataset_num_proc: 12
+dataset_train_split: train    
+dataset_test_split: validation
+
+# Hyperparameters
+learning_rate: 2.0e-5
+gradient_checkpointing: true
+num_train_epochs: 1.0
+max_steps: 500
+logging_steps: 1
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 16
+save_steps: 5
+
+# LoRA / PEFT
+use_peft: true
+lora_r: 64
+lora_alpha: 128
+lora_dropout: 0.0
+lora_target_modules: all-linear
+
+# Seq length & scheduler
+max_length: 4096
+warmup_ratio: 0.03
+lr_scheduler_type: cosine_with_min_lr
+lr_scheduler_kwargs:
+  min_lr_rate: 0.1
+
+# Output & logging
+output_dir: output/apertus_lora
+seed: 42
+report_to: # add wandb to log run on Weigths and Biases
+  - wandb
+run_name: "ap-medqa-lora_r64_alpha128_70B"  
+logging_steps: 5                # how often to log train loss
+eval_strategy: "steps"          # or "epoch"
+eval_steps: 25                  # how often to log eval metrics
+save_steps: 50
+do_eval: true
+do_train: true
+per_device_eval_batch_size: 2
+eval_accumulation_steps: 4  
+deepspeed: configs/ds_zero3.json
