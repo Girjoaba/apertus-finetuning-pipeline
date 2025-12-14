@@ -117,6 +117,13 @@ cd /iopsstor/scratch/cscs/$USER/group_project/apertus-finetuning-pipeline
 wandb sweep configs/sweep.yaml
 ```
 
+Add sweep ID to *scripts/alps/single_gpu_lora_8B_sweep.sbatch* and modify "#SBATCH --array=1-50%10" to sepcfiy how many hyperparameter combinations to test.
+
+Run a sweep.
+```bash
+bash scripts/alps/single_gpu_lora_8B_sweep.sbatch
+```
+
 On Wandb filter for Sweeps by selecting the broom icon.
 
 <!-- ## Datasets
