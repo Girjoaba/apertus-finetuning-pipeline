@@ -92,6 +92,7 @@ The metric *eval/medqa_mcq_accuracy* gives the multiple-choice accuracy.
 
 ## Training
 
+### Small model:
 To train with LoRa:
 ```bash
 sbatch scripts/alps/single_gpu_lora_8B.sbatch
@@ -102,7 +103,31 @@ To perform full parameter training:
 sbatch scripts/alps/multi_gpu_full_param_8B.sbatch
 ```
 
+### Large model:
+
+Make *mutli_node.sh* executable:
+```bash
+chmod +x mutli_node.sh
+```
+
+Submit training job:
+```bash
+sbatch --account=large-sc-2 submit_multinode.sh
+```
+
 See the results on W&B.
+
+## Run hyperparameter optimization with Wandb sweeps
+
+Get a sweep ID (only when starting a new optimization round):
+```bash
+srun --account=large-sc-2 -p debug --environment="/iopsstor/scratch/cscs/wglanzer/group_project/container/container.toml"--pty bash
+cd /iopsstor/scratch/cscs/$USER/group_project/apertus-finetuning-pipeline
+wandb sweep configs/sweep.yaml
+```
+
+On Wandb filter for Sweeps by selecting the broom icon.
+
 <!-- ## Datasets
 
 A first attempt is to finetune for the medical domain. But, see [this repository](https://github.com/mlabonne/llm-datasets?tab=readme-ov-file) for many LLM training datasets.
