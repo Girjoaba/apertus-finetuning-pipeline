@@ -192,7 +192,7 @@ def main(
         trainer_kwargs = {
             "medqa_eval_dataset": eval_dataset,
             "medqa_tokenizer": tokenizer,
-            "medqa_max_samples": 100,
+            "medqa_max_samples": 500,
         }
 
     trainer = trainer_cls(

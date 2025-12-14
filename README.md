@@ -105,15 +105,6 @@ sbatch scripts/alps/multi_gpu_full_param_8B.sbatch
 
 ### Large model:
 
-Make *mutli_node.sh* executable:
-```bash
-chmod +x mutli_node.sh
-```
-
-Submit training job:
-```bash
-sbatch --account=large-sc-2 submit_multinode.sh
-```
 
 See the results on W&B.
 
