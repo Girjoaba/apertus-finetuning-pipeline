@@ -62,18 +62,33 @@ def disable_fsdp_padding_idx(model: torch.nn.Module) -> None:
                 module.padding_idx = None
 
 
-def sanity_check_dataset(dataset, tokenizer) -> None:
-    """
-    Inspect message before training...
-    """
+def sanity_check_dataset(dataset, tokenizer):
+    """Inspect a few samples from the dataset."""
     logger.info("Inspecting messages...")
     sample = dataset[0]
-    if "messages" in sample:
-        logger.info(f"Sample messages:\n{sample['messages']}")
-        formatted = tokenizer.apply_chat_template(sample["messages"], tokenize=False)
-        logger.info(f"Formatted text (first 200 chars):\n{formatted[:200]}...")
+    logger.info(f"Sample messages:\n{sample['messages']}")
+    
+    # Only apply chat template if available
+    if hasattr(tokenizer, 'chat_template') and tokenizer.chat_template:
+        try:
+            formatted = tokenizer.apply_chat_template(sample["messages"], tokenize=False)
+            logger.info(f"Formatted sample:\n{formatted}")
+        except Exception as e:
+            logger.warning(f"Could not apply chat template: {e}")
     else:
-        logger.warning("Dataset does not contain 'messages' key after formatting!")
+        logger.warning("Skipping chat template formatting (not configured for this tokenizer)")
+
+def is_deepspeed_zero3():
+    """Check if DeepSpeed ZeRO-3 is enabled."""
+    if training_args.deepspeed:
+        import json
+        try:
+            with open(training_args.deepspeed, 'r') as f:
+                ds_config = json.load(f)
+                return ds_config.get('zero_optimization', {}).get('stage', 0) == 3
+        except Exception:
+            pass
+    return False
 
 
 def main(
@@ -127,7 +142,7 @@ def main(
     # ========================
     model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
         pretrained_model_name_or_path=model_args.model_name_or_path,
-        dtype=model_args.torch_dtype,
+        dtype=model_args.dtype,
         use_cache=False if training_args.gradient_checkpointing else True,
         attn_implementation=model_args.attn_implementation,
         device_map=device_map,
@@ -145,6 +160,10 @@ def main(
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
+
+    if tokenizer.chat_template is None:
+        logger.warning("Tokenizer has no chat_template. Setting a default template.")
+        tokenizer.chat_template = """{% for message in messages %}{% if message['role'] == 'user' %}{{ '<|user|>\n' + message['content'] + '<|end|>\n' }}{% elif message['role'] == 'assistant' %}{{ '<|assistant|>\n' + message['content'] + '<|end|>\n' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ '<|assistant|>\n' }}{% endif %}"""
 
     # ========================
     # Training Mode (PEFT vs Full)
@@ -205,9 +224,10 @@ def main(
         **trainer_kwargs,
     )
 
-    # visualize predictions
-    if "wandb" in (training_args.report_to or []) and training_args.process_index == 0:
-        if not getattr(training_args, "fsdp", None):
+    if is_deepspeed_zero3():
+        logging.info("DeepSpeed ZeRO-3 detected - Skipping WandbPredictionCallback (incompatible with generate())")
+    elif not any(isinstance(cb, WandbPredictionCallback) for cb in trainer.callback_handler.callbacks):
+        if "wandb" in (training_args.report_to or []) and training_args.process_index == 0:
             logger.info("FSDP not detected - Adding WandbPredictionCallback")
             pred_callback = WandbPredictionCallback(
                 trainer=trainer,
@@ -216,10 +236,6 @@ def main(
                 num_samples=25,
             )
             trainer.add_callback(pred_callback)
-        else:
-            logger.info(
-                "FSDP detected - Skipping WandbPredictionCallback to avoid sharding complexity"
-            )
 
     trainer.can_return_loss = True
 
