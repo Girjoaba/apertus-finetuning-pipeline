@@ -142,7 +142,7 @@ def main(
     # ========================
     model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
         pretrained_model_name_or_path=model_args.model_name_or_path,
-        dtype=model_args.dtype,
+        dtype=model_args.torch_dtype,
         use_cache=False if training_args.gradient_checkpointing else True,
         attn_implementation=model_args.attn_implementation,
         device_map=device_map,
