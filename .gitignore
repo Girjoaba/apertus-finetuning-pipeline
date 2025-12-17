@@ -1,9 +1,12 @@
+# Config files with sensitive information
+config.sh
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
 
-congig.sh
+
 
 
 
