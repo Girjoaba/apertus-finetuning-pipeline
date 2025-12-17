@@ -35,7 +35,7 @@ lr_scheduler_kwargs:
   min_lr_rate: 0.1
 
 # Output & logging
-output_dir: output/apertus_lora
+output_dir: output/apertus_lora_70B
 seed: 42
 report_to: # add wandb to log run on Weigths and Biases
   - wandb
