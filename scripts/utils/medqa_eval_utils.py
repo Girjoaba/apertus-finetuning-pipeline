@@ -153,22 +153,49 @@ def extract_choice(text: str) -> Optional[str]:
     """
     Extract A, B, C, or D from generated text.
     Uses multiple patterns to robustly extract the answer.
+    Returns None if no valid choice found.
     """
-    # Look for explicit "Answer: X" pattern
-    m = re.search(r"Answer:\s*([ABCD])", text, re.IGNORECASE)
+    if not text:
+        return None
+    
+    # Normalize text
+    text_clean = text.strip()
+    
+    # Pattern 1: Explicit "Answer: X" or "Answer is X" pattern (highest priority)
+    m = re.search(r"(?:answer|correct answer|correct option)(?:\s+is)?[:\s]+([ABCD])\b", text_clean, re.IGNORECASE)
     if m:
         return m.group(1).upper()
-
-    # Look for "X:" or "X)" at the start of a line or sentence
-    start_pattern = re.search(r"\b([ABCD])[\:\)\.]", text)
+    
+    # Pattern 2: "X:" or "X)" or "X." at start of response or after newline
+    start_pattern = re.search(r"(?:^|\n)\s*([ABCD])[\:\)\.\s]", text_clean)
     if start_pattern:
         return start_pattern.group(1).upper()
-
-    # Look for standalone letters with word boundaries
-    standalone = re.search(r"\b([ABCD])\b", text)
+    
+    # Pattern 3: "(X)" format like "(A)" or "( A )"
+    paren_pattern = re.search(r"\(\s*([ABCD])\s*\)", text_clean, re.IGNORECASE)
+    if paren_pattern:
+        return paren_pattern.group(1).upper()
+    
+    # Pattern 4: "Option X" or "choice X"
+    option_pattern = re.search(r"(?:option|choice)\s+([ABCD])\b", text_clean, re.IGNORECASE)
+    if option_pattern:
+        return option_pattern.group(1).upper()
+    
+    # Pattern 5: Letter followed by colon/paren anywhere in text
+    anywhere_pattern = re.search(r"\b([ABCD])[\:\)]", text_clean)
+    if anywhere_pattern:
+        return anywhere_pattern.group(1).upper()
+    
+    # Pattern 6: Standalone letter with word boundaries (last resort, first match)
+    standalone = re.search(r"\b([ABCD])\b", text_clean)
     if standalone:
         return standalone.group(1).upper()
-
+    
+    # Pattern 7: Check if the FIRST word/character is A, B, C, or D
+    first_char = text_clean.lstrip()[:1].upper()
+    if first_char in "ABCD":
+        return first_char
+    
     return None
 
 

@@ -64,8 +64,8 @@ def parse_args():
     parser.add_argument(
         "--max_new_tokens",
         type=int,
-        default=16,
-        help="Maximum tokens to generate (default: 16)",
+        default=128,
+        help="Maximum tokens to generate (default: 128)",
     )
     parser.add_argument(
         "--output",

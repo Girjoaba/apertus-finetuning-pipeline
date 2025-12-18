@@ -131,24 +131,50 @@ def format_medqa_prompt(example: dict) -> str:
 def extract_choice(text: str) -> Optional[str]:
     """
     Extract A, B, C, or D from generated text.
+    Uses multiple patterns to robustly extract the answer.
+    Returns None if no valid choice found.
     """
-    import re
-
-    # Look for explicit "Answer: X" pattern
-    m = re.search(r"Answer:\s*([ABCD])", text, re.IGNORECASE)
+    if not text:
+        return None
+    
+    # Normalize text
+    text_clean = text.strip()
+    
+    # Pattern 1: Explicit "Answer: X" or "Answer is X" pattern (highest priority)
+    m = re.search(r"(?:answer|correct answer|correct option)(?:\s+is)?[:\s]+([ABCD])\b", text_clean, re.IGNORECASE)
     if m:
         return m.group(1).upper()
-
-    # Look for "X:" or "X)" at the start
-    start_pattern = re.search(r"\b([ABCD])[\:\)\.]", text)
+    
+    # Pattern 2: "X:" or "X)" or "X." at start of response or after newline
+    start_pattern = re.search(r"(?:^|\n)\s*([ABCD])[\:\)\.\s]", text_clean)
     if start_pattern:
         return start_pattern.group(1).upper()
-
-    # Look for standalone letters
-    standalone = re.search(r"\b([ABCD])\b", text)
+    
+    # Pattern 3: "(X)" format like "(A)" or "( A )"
+    paren_pattern = re.search(r"\(\s*([ABCD])\s*\)", text_clean, re.IGNORECASE)
+    if paren_pattern:
+        return paren_pattern.group(1).upper()
+    
+    # Pattern 4: "Option X" or "choice X"
+    option_pattern = re.search(r"(?:option|choice)\s+([ABCD])\b", text_clean, re.IGNORECASE)
+    if option_pattern:
+        return option_pattern.group(1).upper()
+    
+    # Pattern 5: Letter followed by colon/paren anywhere in text
+    anywhere_pattern = re.search(r"\b([ABCD])[\:\)]", text_clean)
+    if anywhere_pattern:
+        return anywhere_pattern.group(1).upper()
+    
+    # Pattern 6: Standalone letter with word boundaries (last resort, first match)
+    standalone = re.search(r"\b([ABCD])\b", text_clean)
     if standalone:
         return standalone.group(1).upper()
-
+    
+    # Pattern 7: Check if the FIRST word/character is A, B, C, or D
+    first_char = text_clean.lstrip()[:1].upper()
+    if first_char in "ABCD":
+        return first_char
+    
     return None
 
 
@@ -156,6 +182,12 @@ def extract_choice(text: str) -> Optional[str]:
 NEW_API_MODELS = [
     "gpt-5.1", "gpt-5-mini", "gpt-5-nano",
     "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
+    "o3", "o4-mini", "o1-preview", "o1-mini",
+]
+
+# Reasoning models need more tokens (includes thinking + output)
+REASONING_MODELS = [
+    "gpt-5.1", "gpt-5-mini", "gpt-5-nano",
     "o3", "o4-mini", "o1-preview", "o1-mini",
 ]
 
@@ -190,14 +222,35 @@ def call_openai_api(
             
             # Use appropriate token limit parameter and temperature
             if use_new_api:
-                request_params["max_completion_tokens"] = 50
+                # Reasoning models need more tokens (thinking + output)
+                if model in REASONING_MODELS:
+                    request_params["max_completion_tokens"] = 2048
+                else:
+                    request_params["max_completion_tokens"] = 100
                 # New models don't support temperature=0, use default
             else:
                 request_params["max_tokens"] = 50
                 request_params["temperature"] = 0  # Greedy decoding for reproducibility
             
             response = client.chat.completions.create(**request_params)
-            return response.choices[0].message.content.strip()
+            
+            # Handle different response structures
+            choice = response.choices[0]
+            
+            # Log full response for debugging new models
+            if use_new_api:
+                logger.info(f"Full response for {model}: finish_reason={choice.finish_reason}, message={choice.message}")
+            
+            # Try standard message content first
+            if choice.message and choice.message.content:
+                return choice.message.content.strip()
+            
+            # For reasoning models, check if there's a different field
+            # Log the full response structure for debugging
+            logger.warning(f"Empty content in response. Choice: {choice}")
+            
+            # Return empty string if no content found
+            return ""
 
         except Exception as e:
             error_str = str(e)
