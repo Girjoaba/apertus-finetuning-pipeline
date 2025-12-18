@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=LSAIE_lora
+#SBATCH --job-name=LSAIE_lora_70B_full_param
 #SBATCH --partition=normal
 #SBATCH --account=large-sc-2
 #SBATCH --nodes=4
