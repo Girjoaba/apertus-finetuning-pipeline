@@ -1,6 +1,22 @@
 {
   "models": [
     {
+      "model": "openai/gpt-5.1",
+      "file": "openai_gpt5_1_test.json",
+      "accuracy": 0.8892380204241949,
+      "correct": 1132,
+      "total": 1273,
+      "model_type": "openai"
+    },
+    {
+      "model": "openai/gpt-4o",
+      "file": "openai_gpt4o_test.json",
+      "accuracy": 0.8735271013354281,
+      "correct": 1112,
+      "total": 1273,
+      "model_type": "openai"
+    },
+    {
       "model": "openai/gpt-4o-mini",
       "file": "openai_gpt4o_mini_test.json",
       "accuracy": 0.7376276512175962,
@@ -17,18 +33,18 @@
       "model_type": "finetuned_lora"
     },
     {
-      "model": "swiss-ai/Apertus-8B-Instruct-2509",
-      "file": "base_8B_test.json",
-      "accuracy": 0.46504320502749413,
-      "correct": 592,
+      "model": "swiss-ai/Apertus-70B-Instruct-2509",
+      "file": "base_70B_test.json",
+      "accuracy": 0.5121759622937941,
+      "correct": 652,
       "total": 1273,
       "model_type": "base"
     },
     {
-      "model": "swiss-ai/Apertus-70B-Instruct-2509",
-      "file": "base_70B_test.json",
-      "accuracy": 0.40769835035349566,
-      "correct": 519,
+      "model": "swiss-ai/Apertus-8B-Instruct-2509",
+      "file": "base_8B_test.json",
+      "accuracy": 0.4666142969363708,
+      "correct": 594,
       "total": 1273,
       "model_type": "base"
     }
