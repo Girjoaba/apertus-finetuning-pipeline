@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """
-Compare evaluation results from base and finetuned models.
+Compare evaluation results from multiple models.
 
 Usage:
-    python scripts/compare_results.py [--base results/base_70B_test.json] [--finetuned results/finetuned_70B_test.json]
+    # Compare two models:
+    python scripts/compare_results.py --base results/base_70B_test.json --finetuned results/finetuned_70B_test.json
+
+    # Compare all available results:
+    python scripts/compare_results.py --all
 """
 
 import argparse
@@ -24,42 +28,112 @@ def load_results(path: str) -> dict:
         return json.load(f)
 
 
-def compare_predictions(base_preds: list, finetuned_preds: list) -> dict:
+def compare_predictions(preds1: list, preds2: list) -> dict:
     """
-    Compare predictions between base and finetuned models.
+    Compare predictions between two models.
     Returns analysis of where models differ.
     """
-    base_correct = {p["index"]: p["correct"] for p in base_preds}
-    finetuned_correct = {p["index"]: p["correct"] for p in finetuned_preds}
+    correct1 = {p["index"]: p["correct"] for p in preds1}
+    correct2 = {p["index"]: p["correct"] for p in preds2}
 
     both_correct = 0
     both_wrong = 0
-    base_only_correct = 0
-    finetuned_only_correct = 0
+    first_only_correct = 0
+    second_only_correct = 0
 
-    for idx in base_correct:
-        bc = base_correct.get(idx, False)
-        fc = finetuned_correct.get(idx, False)
+    for idx in correct1:
+        c1 = correct1.get(idx, False)
+        c2 = correct2.get(idx, False)
 
-        if bc and fc:
+        if c1 and c2:
             both_correct += 1
-        elif not bc and not fc:
+        elif not c1 and not c2:
             both_wrong += 1
-        elif bc and not fc:
-            base_only_correct += 1
+        elif c1 and not c2:
+            first_only_correct += 1
         else:
-            finetuned_only_correct += 1
+            second_only_correct += 1
 
     return {
         "both_correct": both_correct,
         "both_wrong": both_wrong,
-        "base_only_correct": base_only_correct,
-        "finetuned_only_correct": finetuned_only_correct,
+        "first_only_correct": first_only_correct,
+        "second_only_correct": second_only_correct,
     }
 
 
+def find_all_results(results_dir: str = "results") -> list[Path]:
+    """Find all *_test.json result files."""
+    results_path = Path(results_dir)
+    return sorted(results_path.glob("*_test.json"))
+
+
+def compare_all_models(results_dir: str = "results") -> None:
+    """Load and compare all available result files."""
+    result_files = find_all_results(results_dir)
+
+    if not result_files:
+        logger.error(f"No *_test.json files found in {results_dir}/")
+        return
+
+    # Load all results
+    all_results = []
+    for path in result_files:
+        try:
+            data = load_results(str(path))
+            data["_file"] = path.name
+            all_results.append(data)
+        except Exception as e:
+            logger.warning(f"Failed to load {path}: {e}")
+
+    if not all_results:
+        logger.error("No valid result files found")
+        return
+
+    # Sort by accuracy (descending)
+    all_results.sort(key=lambda x: x.get("accuracy", 0), reverse=True)
+
+    # Print comparison table
+    print("\n" + "=" * 80)
+    print("MEDQA TEST SPLIT - ALL MODELS COMPARISON")
+    print("=" * 80)
+    print(f"\n{'Model':<45} {'Accuracy':>12} {'Correct':>12} {'Total':>8}")
+    print("-" * 80)
+
+    for result in all_results:
+        model_name = result.get("model", result["_file"])
+        # Truncate long model names
+        if len(model_name) > 43:
+            model_name = model_name[:40] + "..."
+        acc = result.get("accuracy", 0)
+        correct = result.get("correct", 0)
+        total = result.get("total", 0)
+        print(f"{model_name:<45} {acc:>12.4f} {correct:>12}/{total:<8}")
+
+    print("=" * 80)
+
+    # Save combined results
+    output_path = Path(results_dir) / "all_models_comparison.json"
+    combined = {
+        "models": [
+            {
+                "model": r.get("model", r["_file"]),
+                "file": r["_file"],
+                "accuracy": r.get("accuracy", 0),
+                "correct": r.get("correct", 0),
+                "total": r.get("total", 0),
+                "model_type": r.get("model_type", "unknown"),
+            }
+            for r in all_results
+        ]
+    }
+    with open(output_path, "w") as f:
+        json.dump(combined, f, indent=2)
+    logger.info(f"Combined comparison saved to {output_path}")
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Compare base vs finetuned model results")
+    parser = argparse.ArgumentParser(description="Compare model evaluation results")
     parser.add_argument(
         "--base",
         type=str,
@@ -78,7 +152,17 @@ def main():
         default="results/comparison_70B_test.json",
         help="Output path for comparison results",
     )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Compare all *_test.json files in results/ directory",
+    )
     args = parser.parse_args()
+
+    # If --all flag, compare all available results
+    if args.all:
+        compare_all_models()
+        return
 
     # Check if files exist
     if not Path(args.base).exists():

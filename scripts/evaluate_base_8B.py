@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Evaluate the base Apertus-70B-Instruct model on MedQA test split.
+Evaluate the base Apertus-8B-Instruct model on MedQA test split.
 
 Usage:
-    python scripts/evaluate_base_70B.py [--batch_size 4] [--max_samples N] [--output results/base_70B_test.json]
+    python scripts/evaluate_base_8B.py [--batch_size 8] [--max_samples N] [--output results/base_8B_test.json]
 """
 
 import argparse
@@ -28,18 +28,18 @@ from scripts.utils.medqa_eval_utils import (
 logger = logging.getLogger(__name__)
 
 # Model configuration
-BASE_MODEL = "swiss-ai/Apertus-70B-Instruct-2509"
+BASE_MODEL = "swiss-ai/Apertus-8B-Instruct-2509"
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Evaluate base Apertus-70B on MedQA test split"
+        description="Evaluate base Apertus-8B on MedQA test split"
     )
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=4,
-        help="Batch size for generation (default: 4)",
+        default=8,
+        help="Batch size for generation (default: 8)",
     )
     parser.add_argument(
         "--max_samples",
@@ -56,14 +56,14 @@ def parse_args():
     parser.add_argument(
         "--output",
         type=str,
-        default="results/base_70B_test.json",
-        help="Output JSON file path (default: results/base_70B_test.json)",
+        default="results/base_8B_test.json",
+        help="Output JSON file path (default: results/base_8B_test.json)",
     )
     parser.add_argument(
         "--log_file",
         type=str,
-        default="logs/eval_base_70B_detailed.log",
-        help="Detailed log file path (default: logs/eval_base_70B_detailed.log)",
+        default="logs/eval_base_8B_detailed.log",
+        help="Detailed log file path (default: logs/eval_base_8B_detailed.log)",
     )
     return parser.parse_args()
 
@@ -75,7 +75,7 @@ def main():
     setup_logging(log_file=args.log_file)
 
     logger.info("=" * 60)
-    logger.info("MedQA Test Evaluation - Base Apertus-70B")
+    logger.info("MedQA Test Evaluation - Base Apertus-8B")
     logger.info("=" * 60)
     logger.info(f"Log file: {args.log_file}")
 
@@ -92,10 +92,8 @@ def main():
         trust_remote_code=True,
     )
 
-    # Load model with automatic device mapping for multi-GPU
+    # Load model - 8B fits on a single GPU
     logger.info(f"Loading base model from {BASE_MODEL}...")
-    logger.info("Using device_map='auto' for multi-GPU sharding")
-
     model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
         torch_dtype=torch.bfloat16,

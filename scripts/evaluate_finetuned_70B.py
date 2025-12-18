@@ -20,15 +20,12 @@ sys.path.insert(0, str(project_root))
 
 from scripts.utils.medqa_eval_utils import (
     setup_hf_auth,
+    setup_logging,
     load_medqa_test_split,
     run_mcq_evaluation,
     save_results,
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
 logger = logging.getLogger(__name__)
 
 # Model configuration
@@ -76,15 +73,25 @@ def parse_args():
         default="results/finetuned_70B_test.json",
         help="Output JSON file path (default: results/finetuned_70B_test.json)",
     )
+    parser.add_argument(
+        "--log_file",
+        type=str,
+        default="logs/eval_finetuned_70B_detailed.log",
+        help="Detailed log file path (default: logs/eval_finetuned_70B_detailed.log)",
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
 
+    # Setup logging with file output
+    setup_logging(log_file=args.log_file)
+
     logger.info("=" * 60)
     logger.info("MedQA Test Evaluation - Finetuned Apertus-70B (LoRA)")
     logger.info("=" * 60)
+    logger.info(f"Log file: {args.log_file}")
 
     # Setup HuggingFace authentication (required for private adapter repo)
     auth_success = setup_hf_auth()

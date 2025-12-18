@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -15,6 +16,60 @@ from datasets import load_dataset
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
+
+
+def setup_logging(log_file: Optional[str] = None, level: int = logging.INFO) -> None:
+    """
+    Setup logging configuration with optional file output.
+    
+    Args:
+        log_file: Optional path to log file. If None, only console logging.
+        level: Logging level (default: INFO)
+    """
+    handlers = [
+        logging.StreamHandler(),  # Console output
+    ]
+    
+    if log_file:
+        log_path = Path(log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handlers.append(logging.FileHandler(log_file, mode='w'))
+    
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=handlers,
+        force=True,  # Override any existing configuration
+    )
+
+
+def log_question_answer(
+    index: int,
+    question: str,
+    options: str,
+    generated_text: str,
+    predicted: Optional[str],
+    gold: str,
+    correct: bool,
+) -> None:
+    """
+    Log a single question-answer pair with full details.
+    """
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    status = "✓ CORRECT" if correct else "✗ WRONG"
+    
+    logger.info("=" * 80)
+    logger.info(f"[{timestamp}] Question {index + 1}")
+    logger.info("-" * 80)
+    logger.info(f"QUESTION: {question[:500]}{'...' if len(question) > 500 else ''}")
+    logger.info(f"OPTIONS:\n{options}")
+    logger.info("-" * 40)
+    logger.info(f"MODEL RESPONSE: {generated_text}")
+    logger.info(f"EXTRACTED ANSWER: {predicted}")
+    logger.info(f"GOLD ANSWER: {gold}")
+    logger.info(f"RESULT: {status}")
+    logger.info("=" * 80)
 
 
 def setup_hf_auth() -> bool:
@@ -126,7 +181,7 @@ def load_medqa_test_split(tokenizer, max_samples: Optional[int] = None) -> list[
         max_samples: Optional limit on number of samples to load
         
     Returns:
-        List of dicts with 'prompt', 'gold_label', and 'gold_idx' keys
+        List of dicts with 'prompt', 'gold_label', 'gold_idx', 'question', and 'options' keys
     """
     logger.info("Loading MedQA test split...")
     dataset = load_dataset(
@@ -147,11 +202,24 @@ def load_medqa_test_split(tokenizer, max_samples: Optional[int] = None) -> list[
         gold_idx = example["label"]
         gold_label = labels[gold_idx]
 
+        # Build question text for logging
+        question_text = example.get("sent1", "").strip()
+        if example.get("sent2"):
+            question_text += " " + example["sent2"]
+
+        # Build options text for logging
+        option_keys = ["ending0", "ending1", "ending2", "ending3"]
+        options_lines = []
+        for i, key in enumerate(option_keys):
+            options_lines.append(f"{labels[i]}: {example.get(key, 'N/A')}")
+        options_text = "\n".join(options_lines)
+
         formatted_data.append({
             "prompt": prompt,
             "gold_label": gold_label,
             "gold_idx": gold_idx,
-            "question": example.get("sent1", ""),
+            "question": question_text,
+            "options": options_text,
         })
 
     logger.info(f"Loaded {len(formatted_data)} test samples")
@@ -230,13 +298,25 @@ def run_mcq_evaluation(
                 correct += 1
             total += 1
 
+            idx = i + j
             predictions.append({
-                "index": i + j,
+                "index": idx,
                 "predicted": pred_letter,
                 "gold": gold_letter,
                 "correct": is_correct,
                 "generated_text": pred_text.strip(),
             })
+
+            # Log question and answer
+            log_question_answer(
+                index=idx,
+                question=test_data[idx].get("question", ""),
+                options=test_data[idx].get("options", ""),
+                generated_text=pred_text.strip(),
+                predicted=pred_letter,
+                gold=gold_letter,
+                correct=is_correct,
+            )
 
     # Restore original padding side
     tokenizer.padding_side = original_padding_side
