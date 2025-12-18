@@ -1,0 +1,36 @@
+{
+  "models": [
+    {
+      "model": "openai/gpt-4o-mini",
+      "file": "openai_gpt4o_mini_test.json",
+      "accuracy": 0.7376276512175962,
+      "correct": 939,
+      "total": 1273,
+      "model_type": "openai"
+    },
+    {
+      "model": "swiss-ai/Apertus-70B-Instruct-2509 + LSAIE-TEAM/apertus-medqa-lora-70B-tuned-parameters",
+      "file": "finetuned_70B_test.json",
+      "accuracy": 0.603299293008641,
+      "correct": 768,
+      "total": 1273,
+      "model_type": "finetuned_lora"
+    },
+    {
+      "model": "swiss-ai/Apertus-8B-Instruct-2509",
+      "file": "base_8B_test.json",
+      "accuracy": 0.46504320502749413,
+      "correct": 592,
+      "total": 1273,
+      "model_type": "base"
+    },
+    {
+      "model": "swiss-ai/Apertus-70B-Instruct-2509",
+      "file": "base_70B_test.json",
+      "accuracy": 0.40769835035349566,
+      "correct": 519,
+      "total": 1273,
+      "model_type": "base"
+    }
+  ]
+}

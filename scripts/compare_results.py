@@ -15,11 +15,114 @@ import json
 import logging
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Color scheme for different model types
+MODEL_COLORS = {
+    "base": "#4A90A4",           # Blue-gray for base models
+    "finetuned_lora": "#2ECC71", # Green for finetuned
+    "openai": "#9B59B6",         # Purple for OpenAI
+    "unknown": "#95A5A6",        # Gray for unknown
+}
+
+
+def get_model_color(model_type: str) -> str:
+    """Get color based on model type."""
+    return MODEL_COLORS.get(model_type, MODEL_COLORS["unknown"])
+
+
+def create_comparison_plot(results: list, output_path: str = "results/plots/model_comparison.png") -> None:
+    """
+    Create a visually appealing bar plot comparing model accuracies.
+    """
+    if not results:
+        logger.warning("No results to plot")
+        return
+
+    # Prepare data
+    models = []
+    accuracies = []
+    colors = []
+    
+    for r in results:
+        # Create shorter display names
+        model_name = r.get("model", r.get("_file", "Unknown"))
+        
+        # Shorten common model names for display
+        display_name = model_name
+        if "swiss-ai/Apertus-70B" in model_name:
+            if "LSAIE-TEAM" in model_name or "lora" in model_name.lower():
+                display_name = "Apertus-70B + LoRA"
+            else:
+                display_name = "Apertus-70B Base"
+        elif "swiss-ai/Apertus-8B" in model_name:
+            if "lora" in model_name.lower():
+                display_name = "Apertus-8B + LoRA"
+            else:
+                display_name = "Apertus-8B Base"
+        elif "openai/" in model_name.lower() or "gpt" in model_name.lower():
+            display_name = model_name.replace("openai/", "").upper()
+        
+        models.append(display_name)
+        accuracies.append(r.get("accuracy", 0) * 100)  # Convert to percentage
+        colors.append(get_model_color(r.get("model_type", "unknown")))
+
+    # Create figure with style
+    plt.style.use('seaborn-v0_8-whitegrid')
+    fig, ax = plt.subplots(figsize=(12, 7))
+    
+    # Create horizontal bar plot (easier to read model names)
+    y_pos = np.arange(len(models))
+    bars = ax.barh(y_pos, accuracies, color=colors, edgecolor='white', linewidth=1.5, height=0.6)
+    
+    # Customize appearance
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(models, fontsize=11)
+    ax.set_xlabel('Accuracy (%)', fontsize=12, fontweight='bold')
+    ax.set_title('MedQA Test Split - Model Comparison', fontsize=14, fontweight='bold', pad=20)
+    
+    # Add value labels on bars
+    for i, (bar, acc) in enumerate(zip(bars, accuracies)):
+        width = bar.get_width()
+        ax.text(width + 0.5, bar.get_y() + bar.get_height()/2, 
+                f'{acc:.1f}%', ha='left', va='center', fontsize=10, fontweight='bold')
+    
+    # Set x-axis limits with padding for labels
+    max_acc = max(accuracies) if accuracies else 100
+    ax.set_xlim(0, min(max_acc + 10, 105))
+    
+    # Add legend for model types
+    legend_elements = [
+        plt.Rectangle((0,0), 1, 1, facecolor=MODEL_COLORS["base"], edgecolor='white', label='Base Model'),
+        plt.Rectangle((0,0), 1, 1, facecolor=MODEL_COLORS["finetuned_lora"], edgecolor='white', label='Finetuned (LoRA)'),
+        plt.Rectangle((0,0), 1, 1, facecolor=MODEL_COLORS["openai"], edgecolor='white', label='OpenAI'),
+    ]
+    ax.legend(handles=legend_elements, loc='lower right', fontsize=10)
+    
+    # Add gridlines
+    ax.xaxis.grid(True, linestyle='--', alpha=0.7)
+    ax.set_axisbelow(True)
+    
+    # Invert y-axis so highest accuracy is at top
+    ax.invert_yaxis()
+    
+    # Tight layout
+    plt.tight_layout()
+    
+    # Save plot
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white')
+    plt.close()
+    
+    logger.info(f"Comparison plot saved to {output_path}")
 
 
 def load_results(path: str) -> dict:
@@ -130,6 +233,9 @@ def compare_all_models(results_dir: str = "results") -> None:
     with open(output_path, "w") as f:
         json.dump(combined, f, indent=2)
     logger.info(f"Combined comparison saved to {output_path}")
+
+    # Create visualization
+    create_comparison_plot(all_results, "results/plots/model_comparison.png")
 
 
 def main():
