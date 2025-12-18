@@ -42,14 +42,18 @@ echo "Project dir: $PROJECT_DIR"
 echo "HF cache: $HF_HOME"
 echo "=============================================="
 
-cd $PROJECT_DIR
-
 # Run evaluation script
 # Using srun with container environment
-srun --environment=$ENVIRONMENT \
+# Must cd to PROJECT_DIR inside the container as it mounts at different path
+CMD="
+    cd $PROJECT_DIR
     python scripts/evaluate_base_70B.py \
         --batch_size 4 \
         --output results/base_70B_test.json
+"
+
+srun --environment=$ENVIRONMENT \
+    bash -c "$CMD"
 
 echo "=============================================="
 echo "Evaluation complete!"

@@ -43,16 +43,20 @@ echo "HF cache: $HF_HOME"
 echo "Adapter: LSAIE-TEAM/apertus-medqa-lora-70B-tuned-parameters"
 echo "=============================================="
 
-cd $PROJECT_DIR
-
 # Run evaluation script
 # Using srun with container environment
+# Must cd to PROJECT_DIR inside the container as it mounts at different path
 # HuggingFace authentication is handled by the Python script
 # (reads token from ~/.cache/huggingface/token)
-srun --environment=$ENVIRONMENT \
+CMD="
+    cd $PROJECT_DIR
     python scripts/evaluate_finetuned_70B.py \
         --batch_size 4 \
         --output results/finetuned_70B_test.json
+"
+
+srun --environment=$ENVIRONMENT \
+    bash -c "$CMD"
 
 echo "=============================================="
 echo "Evaluation complete!"
