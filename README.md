@@ -93,15 +93,21 @@ The metric *eval/medqa_mcq_accuracy* gives the multiple-choice accuracy.
 ## Training
 
 ### Small model:
-To train with LoRa:
+To train the 8B model with LoRa:
 ```bash
 sbatch scripts/alps/single_gpu_lora_8B.sbatch
 ```
 
-To perform full parameter training:
+To perform full parameter finetuning with LoRa on the 8B:
 ```bash
 sbatch scripts/alps/multi_gpu_full_param_8B.sbatch
 ```
+
+To train the 70B model with LoRa:
+```bash
+sbatch scripts/alps/multi_gpu_lora_70B.sbatch
+```
+
 
 ### Large model:
 
