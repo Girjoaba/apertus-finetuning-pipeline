@@ -1,27 +1,0 @@
-/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
-  import pynvml  # type: ignore[import]
-2025-11-23:23:27:11 INFO     [__main__:446] Selected Tasks: ['medqa_4options']
-2025-11-23:23:27:11 WARNING  [evaluator:172] pretrained=pretrained=swiss-ai/Apertus-8B-Instruct-2509,peft=/iopsstor/scratch/cscs/agirjoaba/apertus-finetuning-pipeline/output/apertus_lora,trust_remote_code=True,dtype=bfloat16
-        appears to be an instruct or chat variant but chat template is not applied. Recommend setting `apply_chat_template` (optionally
-        `fewshot_as_multiturn`).
-2025-11-23:23:27:11 INFO     [evaluator:202] Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234 | Setting fewshot manual seed to 1234
-2025-11-23:23:27:11 INFO     [evaluator:240] Initializing hf model, with arguments: {'pretrained': 'swiss-ai/Apertus-8B-Instruct-2509', 'peft':
-        '/iopsstor/scratch/cscs/agirjoaba/apertus-finetuning-pipeline/output/apertus_lora', 'trust_remote_code': True, 'dtype': 'bfloat16'}
-2025-11-23:23:27:11 INFO     [models.huggingface:147] Using device 'cuda:0'
-2025-11-23:23:27:12 INFO     [models.huggingface:414] Model parallel was set to False, max memory was not set, and device map was set to {'': 'cuda:0'}
-`torch_dtype` is deprecated! Use `dtype` instead!
-Using experimental xIELU CUDA. Enabled torch._dynamo for xIELU CUDA.
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:03,  1.13s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:02<00:02,  1.12s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:03<00:01,  1.15s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.24it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.08it/s]
-2025-11-23:23:27:21 INFO     [api.task:434] Building contexts for medqa_4options on rank 0...
-  0%|          | 0/1273 [00:00<?, ?it/s] 35%|███▌      | 447/1273 [00:00<00:00, 1358.91it/s]100%|██████████| 1273/1273 [00:00<00:00, 3767.83it/s]
-2025-11-23:23:27:22 INFO     [evaluator:574] Running loglikelihood requests
-Running loglikelihood requests:   0%|          | 0/5092 [00:00<?, ?it/s]Running loglikelihood requests:   0%|          | 1/5092 [00:19<28:02:40, 19.83s/it]Running loglikelihood requests:   5%|▌         | 257/5092 [00:21<04:46, 16.86it/s] Running loglikelihood requests:  10%|█         | 513/5092 [00:22<02:04, 36.84it/s]Running loglikelihood requests:  15%|█▌        | 769/5092 [00:23<01:12, 60.04it/s]Running loglikelihood requests:  20%|██        | 1025/5092 [00:24<00:47, 85.98it/s]Running loglikelihood requests:  25%|██▌       | 1281/5092 [00:25<00:33, 114.00it/s]Running loglikelihood requests:  30%|███       | 1537/5092 [00:26<00:24, 142.75it/s]Running loglikelihood requests:  35%|███▌      | 1793/5092 [00:27<00:19, 172.30it/s]Running loglikelihood requests:  40%|████      | 2049/5092 [00:27<00:15, 201.48it/s]Running loglikelihood requests:  45%|████▌     | 2305/5092 [00:28<00:12, 229.67it/s]Running loglikelihood requests:  50%|█████     | 2561/5092 [00:29<00:09, 256.14it/s]Running loglikelihood requests:  55%|█████▌    | 2817/5092 [00:30<00:08, 281.08it/s]Running loglikelihood requests:  60%|██████    | 3073/5092 [00:30<00:06, 305.64it/s]Running loglikelihood requests:  65%|██████▌   | 3329/5092 [00:31<00:05, 328.32it/s]Running loglikelihood requests:  70%|███████   | 3585/5092 [00:32<00:04, 350.53it/s]Running loglikelihood requests:  75%|███████▌  | 3841/5092 [00:32<00:03, 372.19it/s]Running loglikelihood requests:  80%|████████  | 4097/5092 [00:33<00:02, 395.28it/s]Running loglikelihood requests:  85%|████████▌ | 4353/5092 [00:33<00:01, 419.20it/s]Running loglikelihood requests:  91%|█████████ | 4609/5092 [00:34<00:01, 449.69it/s]Running loglikelihood requests:  96%|█████████▌| 4865/5092 [00:34<00:00, 502.40it/s]Running loglikelihood requests: 100%|██████████| 5092/5092 [00:34<00:00, 146.98it/s]
-2025-11-23:23:28:05 INFO     [loggers.evaluation_tracker:280] Output path not provided, skipping saving results aggregated
-Passed argument batch_size = auto:1. Detecting largest batch size
-Determined largest batch size: 64
-hf (pretrained=swiss-ai/Apertus-8B-Instruct-2509,peft=/iopsstor/scratch/cscs/agirjoaba/apertus-finetuning-pipeline/output/apertus_lora,trust_remote_code=True,dtype=bfloat16), gen_kwargs: (None), limit: None, num_fewshot: None, batch_size: auto (64)
-|    Tasks     |Version|Filter|n-shot| Metric |   |Value |   |Stderr|
-|--------------|-------|------|-----:|--------|---|-----:|---|-----:|
-|medqa_4options|Yaml   |none  |     0|acc     |↑  |0.5216|±  | 0.014|
-|              |       |none  |     0|acc_norm|↑  |0.5216|±  | 0.014|
-

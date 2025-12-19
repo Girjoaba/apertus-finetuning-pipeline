@@ -67,25 +67,31 @@ def sanity_check_dataset(dataset, tokenizer):
     logger.info("Inspecting messages...")
     sample = dataset[0]
     logger.info(f"Sample messages:\n{sample['messages']}")
-    
+
     # Only apply chat template if available
-    if hasattr(tokenizer, 'chat_template') and tokenizer.chat_template:
+    if hasattr(tokenizer, "chat_template") and tokenizer.chat_template:
         try:
-            formatted = tokenizer.apply_chat_template(sample["messages"], tokenize=False)
+            formatted = tokenizer.apply_chat_template(
+                sample["messages"], tokenize=False
+            )
             logger.info(f"Formatted sample:\n{formatted}")
         except Exception as e:
             logger.warning(f"Could not apply chat template: {e}")
     else:
-        logger.warning("Skipping chat template formatting (not configured for this tokenizer)")
+        logger.warning(
+            "Skipping chat template formatting (not configured for this tokenizer)"
+        )
+
 
 def is_deepspeed_zero3():
     """Check if DeepSpeed ZeRO-3 is enabled."""
     if training_args.deepspeed:
         import json
+
         try:
-            with open(training_args.deepspeed, 'r') as f:
+            with open(training_args.deepspeed, "r") as f:
                 ds_config = json.load(f)
-                return ds_config.get('zero_optimization', {}).get('stage', 0) == 3
+                return ds_config.get("zero_optimization", {}).get("stage", 0) == 3
         except Exception:
             pass
     return False
@@ -142,7 +148,7 @@ def main(
     # ========================
     model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
         pretrained_model_name_or_path=model_args.model_name_or_path,
-        dtype=model_args.dtype,
+        dtype=model_args.torch_dtype,
         use_cache=False if training_args.gradient_checkpointing else True,
         attn_implementation=model_args.attn_implementation,
         device_map=device_map,
@@ -181,20 +187,42 @@ def main(
     # ========================
     # Dataset
     # ========================
-    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
-    formatting_func = get_formatting_func(script_args.dataset_name)
-
-    if formatting_func:
-        logger.info(f"Applying formatting for {script_args.dataset_name}...")
-        dataset = dataset.map(formatting_func, num_proc=training_args.dataset_num_proc)
-    else:
-        logger.warning(
-            f"No specific formatter found for {script_args.dataset_name}. Assuming dataset is already formatted."
+    with training_args.main_process_first(desc="loading and tokenizing dataset"):
+        dataset = load_dataset(
+            script_args.dataset_name, name=script_args.dataset_config
         )
+        formatting_func = get_formatting_func(script_args.dataset_name)
 
-    # Split dataset
-    train_dataset = dataset[script_args.dataset_train_split]
-    eval_dataset = dataset[script_args.dataset_test_split]
+        if formatting_func:
+            logger.info(f"Applying formatting for {script_args.dataset_name}...")
+            # Now safe: Rank 0 writes the cache, others just read it later
+            dataset = dataset.map(
+                formatting_func,
+                num_proc=training_args.dataset_num_proc,
+                load_from_cache_file=True,  # Ensure we use the cache
+            )
+        else:
+            logger.warning(
+                f"No specific formatter found for {script_args.dataset_name}. Assuming dataset is already formatted."
+            )
+
+        # Do the split inside the block as well to ensure consistency
+        train_dataset = dataset[script_args.dataset_train_split]
+        eval_dataset = dataset[script_args.dataset_test_split]
+    # dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    # formatting_func = get_formatting_func(script_args.dataset_name)
+
+    # if formatting_func:
+    #     logger.info(f"Applying formatting for {script_args.dataset_name}...")
+    #     dataset = dataset.map(formatting_func, num_proc=training_args.dataset_num_proc)
+    # else:
+    #     logger.warning(
+    #         f"No specific formatter found for {script_args.dataset_name}. Assuming dataset is already formatted."
+    #     )
+
+    # # Split dataset
+    # train_dataset = dataset[script_args.dataset_train_split]
+    # eval_dataset = dataset[script_args.dataset_test_split]
 
     # Validate before training
     sanity_check_dataset(train_dataset, tokenizer)
@@ -224,11 +252,19 @@ def main(
         **trainer_kwargs,
     )
 
-    if is_deepspeed_zero3():
-        logging.info("DeepSpeed ZeRO-3 detected - Skipping WandbPredictionCallback (incompatible with generate())")
-    elif not any(isinstance(cb, WandbPredictionCallback) for cb in trainer.callback_handler.callbacks):
-        if "wandb" in (training_args.report_to or []) and training_args.process_index == 0:
-            logger.info("FSDP not detected - Adding WandbPredictionCallback")
+    if is_deepspeed_zero3() or training_args.fsdp:
+        logging.info(
+            "DeepSpeed ZeRO-3 or FSDP detected - Skipping WandbPredictionCallback (incompatible with direct generate())"
+        )
+    elif not any(
+        isinstance(cb, WandbPredictionCallback)
+        for cb in trainer.callback_handler.callbacks
+    ):
+        if (
+            "wandb" in (training_args.report_to or [])
+            and training_args.process_index == 0
+        ):
+            logger.info("FSDP/DS not detected - Adding WandbPredictionCallback")
             pred_callback = WandbPredictionCallback(
                 trainer=trainer,
                 tokenizer=tokenizer,

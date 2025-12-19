@@ -43,7 +43,12 @@ run_name: "ap-medqa-full_8B"
 logging_steps: 5                # how often to log train loss
 eval_strategy: "steps"          # or "epoch"
 eval_steps: 25                  # how often to log eval metrics
-save_steps: 100
+save_strategy: "steps"
+save_steps: 25
+load_best_model_at_end: true
+metric_for_best_model: "eval_medqa_mcq_accuracy"
+greater_is_better: true   
+save_total_limit: 2
 do_eval: true
 log_on_each_node: false
 logging_strategy: "steps"

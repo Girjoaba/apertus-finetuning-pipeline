@@ -170,12 +170,10 @@ class MedQASFTTrainer(SFTTrainer):
         metrics = super().evaluate(eval_dataset=eval_dataset, **kwargs)
         acc = self._run_medqa_eval()
 
-        # Only main process should run this extra eval
-        if self.args.process_index == 0:
-            if acc is not None:
-                metrics["eval_medqa_mcq_accuracy"] = acc
-                self.log({"eval_medqa_mcq_accuracy": acc})
-
+        if acc is not None:
+            metrics["eval_medqa_mcq_accuracy"] = acc
+            self.log({"eval_medqa_mcq_accuracy": acc})
+            if self.args.process_index == 0:
                 print(
                     f"[MedQASFTTrainer] Step {self.state.global_step}: "
                     f"eval_medqa_mcq_accuracy = {acc:.4f}"
