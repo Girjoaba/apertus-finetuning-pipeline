@@ -6,8 +6,8 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH --time=04:00:00
-#SBATCH --output=logs/finetune_apertus_full_param70B_%j.out
-#SBATCH --error=logs/finetune_apertus_full_param70B_%j.err
+#SBATCH --output=logs/finetune_apertus_lora_70B_%j.out
+#SBATCH --error=logs/finetune_apertus_lora_70B_%j.err
 #SBATCH --exclusive
 
 set -eo pipefail
