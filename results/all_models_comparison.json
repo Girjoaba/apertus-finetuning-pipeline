@@ -33,6 +33,22 @@
       "model_type": "finetuned_lora"
     },
     {
+      "model": "Apertus-8B + LoRA Improved (local)",
+      "file": "apertus_8b_lora_improved_test.json",
+      "accuracy": 0.5663786331500392,
+      "correct": 721,
+      "total": 1273,
+      "model_type": "finetuned_lora"
+    },
+    {
+      "model": "Apertus-8B + LoRA (local)",
+      "file": "apertus_8b_lora_test.json",
+      "accuracy": 0.5318146111547526,
+      "correct": 677,
+      "total": 1273,
+      "model_type": "finetuned_lora"
+    },
+    {
       "model": "swiss-ai/Apertus-70B-Instruct-2509",
       "file": "base_70B_test.json",
       "accuracy": 0.5121759622937941,
