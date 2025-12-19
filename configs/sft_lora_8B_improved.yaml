@@ -1,0 +1,73 @@
+# =============================================================================
+# Improved 8B LoRA Config for MedQA Fine-tuning
+# Key changes from original:
+#   - Higher LR (1e-4) - more appropriate for LoRA
+#   - Weight decay (0.01) - regularization to prevent overfitting
+#   - More training steps (1500) - ~3.7 epochs for better convergence
+#   - Larger batch per device (2) with less accumulation (8) - faster feedback
+#   - Warmup ratio (0.06) - slightly longer warmup for stability
+# =============================================================================
+
+# Model
+model_name_or_path: swiss-ai/Apertus-8B-Instruct-2509
+attn_implementation: flash_attention_2
+torch_dtype: bfloat16
+
+# Dataset
+dataset_name: openlifescienceai/MedQA-USMLE-4-options-hf
+dataset_config: null 
+dataset_num_proc: 12
+dataset_train_split: train       # 10.2k samples
+dataset_test_split: validation   # 1.27k samples (test split reserved for final eval)
+
+# =============================================================================
+# Hyperparameters - IMPROVED
+# =============================================================================
+learning_rate: 1.0e-4            # ↑ Higher for LoRA (was 2e-4, typical range 1e-4 to 5e-4)
+weight_decay: 0.01               # ↑ Added regularization (was 0.0)
+gradient_checkpointing: true
+num_train_epochs: 3.0            # ↑ More epochs for better convergence
+max_steps: 1500                  # ↑ ~3.7 epochs (10178 / (2*8) * 3 ≈ 1500)
+per_device_train_batch_size: 2   # ↑ Larger batch (was 1)
+gradient_accumulation_steps: 8   # ↓ Less accumulation (was 16) - faster weight updates
+                                 # Effective batch size: 2 * 8 = 16 (single GPU)
+
+# LoRA / PEFT
+use_peft: true
+lora_r: 64                       # Rank - good balance of capacity vs efficiency
+lora_alpha: 128                  # Alpha = 2*r is a common scaling choice
+lora_dropout: 0.05               # ↑ Small dropout for regularization (was 0.0)
+lora_target_modules: all-linear
+
+# Seq length & scheduler
+max_length: 4096
+warmup_ratio: 0.06               # ↑ Slightly longer warmup (was 0.03)
+lr_scheduler_type: cosine_with_min_lr
+lr_scheduler_kwargs:
+  min_lr_rate: 0.1               # LR decays to 10% of peak
+
+# =============================================================================
+# Output & logging
+# =============================================================================
+output_dir: output/apertus_lora_8B_improved
+seed: 42
+report_to:
+  - wandb
+run_name: "ap-medqa-lora8B-improved"
+
+# Logging frequency
+logging_strategy: "steps"
+logging_steps: 10                # Log train metrics every 10 steps
+
+# Evaluation
+do_eval: true
+eval_strategy: "steps"
+eval_steps: 50                   # Evaluate every 50 steps (~3x per epoch)
+
+# Checkpointing
+save_strategy: "steps"
+save_steps: 150                  # Save every 150 steps (~10 checkpoints total)
+save_total_limit: 5              # Keep only last 5 checkpoints to save disk space
+load_best_model_at_end: true     # Load best checkpoint at end based on eval loss
+metric_for_best_model: "eval_loss"
+greater_is_better: false
