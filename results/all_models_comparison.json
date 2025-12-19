@@ -25,10 +25,10 @@
       "model_type": "openai"
     },
     {
-      "model": "swiss-ai/Apertus-70B-Instruct-2509 + LSAIE-TEAM/apertus-medqa-lora-70B-tuned-parameters",
-      "file": "finetuned_70B_test.json",
-      "accuracy": 0.603299293008641,
-      "correct": 768,
+      "model": "Apertus-70B + LoRA (HuggingFace)",
+      "file": "apertus_70b_lora_hf_test.json",
+      "accuracy": 0.608012568735271,
+      "correct": 774,
       "total": 1273,
       "model_type": "finetuned_lora"
     },

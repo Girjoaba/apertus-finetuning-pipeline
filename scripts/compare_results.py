@@ -54,25 +54,47 @@ def create_comparison_plot(results: list, output_path: str = "results/plots/mode
     for r in results:
         # Create shorter display names
         model_name = r.get("model", r.get("_file", "Unknown"))
+        file_name = r.get("_file", "")
         
-        # Shorten common model names for display
+        # Shorten common model names for display - NO BRACKETS
         display_name = model_name
-        if "swiss-ai/Apertus-70B" in model_name:
-            if "LSAIE-TEAM" in model_name or "lora" in model_name.lower():
-                display_name = "Apertus-70B + LoRA"
-            else:
-                display_name = "Apertus-70B Base"
-        elif "swiss-ai/Apertus-8B" in model_name:
-            if "lora" in model_name.lower():
-                display_name = "Apertus-8B + LoRA"
-            else:
-                display_name = "Apertus-8B Base"
-        elif "openai/" in model_name.lower() or "gpt" in model_name.lower():
-            display_name = model_name.replace("openai/", "").upper()
+        
+        # Handle different model types based on filename and model name
+        if "apertus_70b_lora_hf" in file_name:
+            display_name = "Apertus 70B LoRA"
+            color = MODEL_COLORS["finetuned_lora"]
+        elif "base_70B" in file_name or ("swiss-ai/Apertus-70B" in model_name and "LSAIE" not in model_name):
+            display_name = "Apertus 70B Base"
+            color = MODEL_COLORS["base"]
+        elif "apertus_8b_lora_improved" in file_name:
+            display_name = "Apertus 8B LoRA Improved"
+            color = MODEL_COLORS["finetuned_lora"]
+        elif "apertus_8b_lora" in file_name:
+            display_name = "Apertus 8B LoRA"
+            color = MODEL_COLORS["finetuned_lora"]
+        elif "base_8B" in file_name or ("swiss-ai/Apertus-8B" in model_name and "LSAIE" not in model_name):
+            display_name = "Apertus 8B Base"
+            color = MODEL_COLORS["base"]
+        elif "gpt-4o-mini" in model_name.lower() or "gpt4o_mini" in file_name:
+            display_name = "GPT-4o Mini"
+            color = MODEL_COLORS["openai"]
+        elif "gpt-4o" in model_name.lower() or "gpt4o" in file_name:
+            display_name = "GPT-4o"
+            color = MODEL_COLORS["openai"]
+        elif "gpt-5.1" in model_name.lower() or "gpt5_1" in file_name:
+            display_name = "GPT-5.1"
+            color = MODEL_COLORS["openai"]
+        elif "gpt-5-mini" in model_name.lower() or "gpt5_mini" in file_name:
+            display_name = "GPT-5 Mini"
+            color = MODEL_COLORS["openai"]
+        else:
+            # Fallback for any other models
+            display_name = model_name.replace("openai/", "").replace("swiss-ai/", "")
+            color = MODEL_COLORS.get(r.get("model_type", "unknown"), MODEL_COLORS["unknown"])
         
         models.append(display_name)
         accuracies.append(r.get("accuracy", 0) * 100)  # Convert to percentage
-        colors.append(get_model_color(r.get("model_type", "unknown")))
+        colors.append(color)
 
     # Create figure with style
     plt.style.use('seaborn-v0_8-whitegrid')
@@ -171,6 +193,32 @@ def find_all_results(results_dir: str = "results") -> list[Path]:
     return sorted(results_path.glob("*_test.json"))
 
 
+def filter_selected_models(all_results: list) -> list:
+    """
+    Filter to include only specific models:
+    - OpenAI models (all)
+    - Apertus Base 70B and 8B
+    - Apertus 8B LoRA
+    - Apertus 8B LoRA Improved
+    - Apertus 70B LoRA (from HuggingFace)
+    """
+    selected = []
+    for r in all_results:
+        file_name = r.get("_file", "")
+        
+        # Include OpenAI models
+        if "openai" in file_name or "gpt" in file_name:
+            selected.append(r)
+        # Include base models
+        elif "base_70B" in file_name or "base_8B" in file_name:
+            selected.append(r)
+        # Include LoRA models
+        elif "apertus_8b_lora" in file_name or "apertus_70b_lora_hf" in file_name:
+            selected.append(r)
+    
+    return selected
+
+
 def compare_all_models(results_dir: str = "results") -> None:
     """Load and compare all available result files."""
     result_files = find_all_results(results_dir)
@@ -193,17 +241,27 @@ def compare_all_models(results_dir: str = "results") -> None:
         logger.error("No valid result files found")
         return
 
+    # Filter to selected models only
+    selected_results = filter_selected_models(all_results)
+
+    if not selected_results:
+        logger.error("No selected models found")
+        return
+
     # Sort by accuracy (descending)
-    all_results.sort(key=lambda x: x.get("accuracy", 0), reverse=True)
+    selected_results.sort(key=lambda x: x.get("accuracy", 0), reverse=True)
+
+    # Sort by accuracy (descending)
+    selected_results.sort(key=lambda x: x.get("accuracy", 0), reverse=True)
 
     # Print comparison table
     print("\n" + "=" * 80)
-    print("MEDQA TEST SPLIT - ALL MODELS COMPARISON")
+    print("MEDQA TEST SPLIT - SELECTED MODELS COMPARISON")
     print("=" * 80)
     print(f"\n{'Model':<45} {'Accuracy':>12} {'Correct':>12} {'Total':>8}")
     print("-" * 80)
 
-    for result in all_results:
+    for result in selected_results:
         model_name = result.get("model", result["_file"])
         # Truncate long model names
         if len(model_name) > 43:
@@ -227,7 +285,7 @@ def compare_all_models(results_dir: str = "results") -> None:
                 "total": r.get("total", 0),
                 "model_type": r.get("model_type", "unknown"),
             }
-            for r in all_results
+            for r in selected_results
         ]
     }
     with open(output_path, "w") as f:
@@ -235,7 +293,7 @@ def compare_all_models(results_dir: str = "results") -> None:
     logger.info(f"Combined comparison saved to {output_path}")
 
     # Create visualization
-    create_comparison_plot(all_results, "results/plots/model_comparison.png")
+    create_comparison_plot(selected_results, "results/plots/model_comparison.png")
 
 
 def main():
